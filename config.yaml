@@ -1,0 +1,46 @@
+# LLM Data Quality Pipeline — Configuration
+# All values here are tunable via the Streamlit sidebar or CLI flags.
+
+pipeline:
+  heuristic_filter: true
+  dedup: true
+  llm_judge: false          # Requires ANTHROPIC_API_KEY
+
+filters:
+  min_words: 50             # Minimum word count per document
+  max_words: 100000         # Maximum word count per document
+  language: "en"            # ISO 639-1 code; null to skip language filtering
+  min_stopword_ratio: 0.08  # Below this → too code-like / garbled
+  max_symbol_ratio: 0.35    # Above this → too many non-alphanumeric chars
+  max_digit_ratio: 0.30     # Above this → too many digits (data dumps, logs)
+  max_repetition_ratio: 0.25 # Above this → repetitive content (spam)
+  min_avg_word_length: 3.0  # Below this → garbled text
+  max_avg_word_length: 15.0 # Above this → likely code or URLs
+
+dedup:
+  method: "minhash"         # "minhash" (fast) or "embedding" (semantic, requires chromadb)
+  threshold: 0.80           # Jaccard similarity threshold for MinHash
+  num_perm: 128             # MinHash permutations (higher = more accurate, slower)
+  ngram_size: 5             # Word n-gram shingle size
+
+rag:
+  enabled: true
+  collection_name: "quality_examples"
+  embedding_model: "all-MiniLM-L6-v2"
+  n_similar_examples: 3     # Few-shot examples to retrieve per judged document
+  persist_dir: "./data/chroma"
+
+judge:
+  model: "claude-3-5-haiku-20241022"
+  min_score: 6              # Documents scoring below this are discarded
+  max_docs: 200             # Cost guard: max docs sent to LLM judge
+
+scoring:
+  heuristic_weight: 0.3     # Weight when LLM score is available
+  llm_weight: 0.7
+  min_quality_score: 0.5    # Final threshold for keep/discard
+
+output:
+  format: "jsonl"           # "jsonl", "parquet", or "csv"
+  include_scores: true
+  include_reasoning: false  # Include LLM reasoning in output (verbose)
